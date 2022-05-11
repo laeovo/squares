@@ -1,40 +1,90 @@
 import ScreenSaver
 
-let stepDuration: UInt8 = 100
+let stepDuration: UInt8 = 10
+let pauseDuration: UInt8 = 10
+let spawnRelax = 40
+
+
+//let screenSize: CGRect = UIScreen.main.bounds // doesn't work yet
+let boxSize: CGFloat = 160
 
 class square {
     init() {
-        
+        currentCell = CGPoint(x: 0, y: 0)
+        targetCell = currentCell
+        currentPosition = CGPoint(x: CGFloat(boxSize)*currentCell.x, y: CGFloat(boxSize)*currentCell.y)
+        age = 0
+        state = "inactive"
     }
     
-    private var state: String = "inactive"
+    private var state: String
     private var progress: UInt8 = 0
-    private var currentCell: CGPoint = CGPoint(x: 0, y: 0)
-    private var color: NSColor = NSColor(red: 0.5, green: 0.75, blue: 0.0, alpha: 0.0)
+    private var currentCell: CGPoint
+    private var targetCell: CGPoint
+    private var currentPosition: CGPoint
+    private var color: NSColor = NSColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
+    private var age: UInt8
     
-    public func create(_ position: CGPoint) {
+    public func activate(position: CGPoint, newColor: NSColor) {
         currentCell = position
-        state = "growing"
+        targetCell = position
+        currentPosition = CGPoint(x: CGFloat(boxSize)*currentCell.x, y: CGFloat(boxSize)*currentCell.y)
+        initNextAction(newState: "grow")
+        color = newColor
     }
     
-    public func initNextAction(typeOfAction: String) {
-        state = typeOfAction
+    public func initNextAction(newState: String) {
+        if newState == "moveUp" {
+            state = "move"
+            targetCell.x = currentCell.x
+            targetCell.y = currentCell.y+1
+        }
+        else if newState == "moveRight" {
+            state = "move"
+            targetCell.x = currentCell.x+1
+            targetCell.y = currentCell.y
+        }
+        else if newState == "moveDown" {
+            state = "move"
+            targetCell.x = currentCell.x
+            targetCell.y = currentCell.y-1
+        }
+        else if newState == "moveLeft" {
+            state = "move"
+            targetCell.x = currentCell.x-1
+            targetCell.y = currentCell.y
+        }
+        else {
+            state = newState
+        }
+        progress = 0
     }
     
     public func makeProgress() {
         progress += 1
-        if state == "moving" {
-            //... move
-        }
-        if state == "growing" {
+        if state == "grow" {
             grow()
+            if progress == stepDuration {
+                state = "idle"
+                age = 0
+            }
         }
-        if state == "dying" {
+        else if state == "move" {
+            currentPosition.x = boxSize*currentCell.x + boxSize*(targetCell.x-currentCell.x)*(0.5-0.5*cos(CGFloat(Double.pi)*CGFloat(progress)/CGFloat(stepDuration)))
+            currentPosition.y = boxSize*currentCell.y + boxSize*(targetCell.y-currentCell.y)*(0.5-0.5*cos(CGFloat(Double.pi)*CGFloat(progress)/CGFloat(stepDuration)))
+            if progress == stepDuration {
+                currentCell = targetCell
+                state = "idle"
+                age += 1
+            }
+        }
+        else if state == "shrink" {
             shrink()
-        }
-        
-        if progress == stepDuration {
-            state = "idle"
+            if progress == stepDuration {
+                currentCell = targetCell
+                state = "inactive"
+                age += 1
+            }
         }
     }
     
@@ -42,15 +92,20 @@ class square {
         return state
     }
     
+    public func getAge() -> UInt8 {
+        return age
+    }
+    
     private func grow() {
         color = NSColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent, alpha: CGFloat(Float(progress) / Float(stepDuration)))
+//        color = NSColor(red: 1, green: 0, blue: 0, alpha: 1)
     }
     private func shrink() {
         color = NSColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent, alpha: 1.0 - CGFloat(Float(progress) / Float(stepDuration)))
     }
     
     public func draw() {
-        let shapeRect = NSRect(x: 500, y: 500, width: 160, height: 160) // TODO: real values
+        let shapeRect = NSRect(x: currentPosition.x, y: currentPosition.y, width: boxSize, height: boxSize)
         let shape = NSBezierPath(rect: shapeRect)
         color.setFill()
         shape.fill()
@@ -66,16 +121,11 @@ class squaresView: ScreenSaverView {
     private let paddleBottomOffset: CGFloat = 100
     private let paddleSize = NSSize(width: 60, height: 20)
     
-    private let boxSizeApprox: UInt16 = 160
-    private var boxSize: UInt16 = 0
-    private let nrSquares = 10
-    
-    private var testSquare: square = square()
+    private var testSquare: square = square() // TODO: construct squares on the run
 
     // MARK: - Initialization
     override init?(frame: NSRect, isPreview: Bool) {
         super.init(frame: frame, isPreview: isPreview)
-        setBoxSize()
     }
 
     @available(*, unavailable)
@@ -95,8 +145,18 @@ class squaresView: ScreenSaverView {
     override func animateOneFrame() {
         super.animateOneFrame()
         
-        if testSquare.getState() == "idle" {
-            testSquare.create(CGPoint(x: 0, y: 0))
+        if testSquare.getState() == "inactive" {
+            testSquare.activate(position: CGPoint(x: Int.random(in: 0..<16), y: Int.random(in: 0..<9)), newColor: NSColor(red: Double.random(in: 0.25...1.0), green: Double.random(in: 0.25...1.0), blue: Double.random(in: 0.25...1.0), alpha: 0.0))
+        }
+        else if testSquare.getState() == "idle" {
+            if testSquare.getAge() == 5 {
+                testSquare.initNextAction(newState: "shrink")
+            }
+            else {
+                let moveDirections = ["moveUp", "moveRight", "moveDown", "moveLeft"]
+                let moveDirection = moveDirections.randomElement()!
+                testSquare.initNextAction(newState: moveDirection)
+            }
         }
         else {
             testSquare.makeProgress()
@@ -178,10 +238,4 @@ class squaresView: ScreenSaverView {
             ballPosition.y - ballRadius >= yBounds.lower &&
             ballPosition.y - ballRadius <= yBounds.upper
     }
-    
-    private func setBoxSize() {
-        boxSize = UInt16(frame.width / 16)
-        
-    }
-
 }
