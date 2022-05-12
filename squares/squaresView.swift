@@ -4,9 +4,8 @@ let stepDuration: UInt8 = 10
 let pauseDuration: UInt8 = 10
 let spawnRelax = 40
 
-
-//let screenSize: CGRect = UIScreen.main.bounds // doesn't work yet
-let boxSize: CGFloat = 160
+let screenSize: CGRect = NSScreen.main!.frame // doesn't work yet
+let boxSize: CGFloat = screenSize.width / 16
 
 class square {
     init() {
@@ -146,7 +145,7 @@ class squaresView: ScreenSaverView {
         super.animateOneFrame()
         
         if testSquare.getState() == "inactive" {
-            testSquare.activate(position: CGPoint(x: Int.random(in: 0..<16), y: Int.random(in: 0..<9)), newColor: NSColor(red: Double.random(in: 0.25...1.0), green: Double.random(in: 0.25...1.0), blue: Double.random(in: 0.25...1.0), alpha: 0.0))
+            testSquare.activate(position: CGPoint(x: Int.random(in: 0..<Int(screenSize.width/boxSize)), y: Int.random(in: 0..<Int(screenSize.height/boxSize))), newColor: NSColor(red: Double.random(in: 0.25...1.0), green: Double.random(in: 0.25...1.0), blue: Double.random(in: 0.25...1.0), alpha: 0.0))
         }
         else if testSquare.getState() == "idle" {
             if testSquare.getAge() == 5 {
