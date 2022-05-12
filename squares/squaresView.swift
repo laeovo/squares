@@ -1,15 +1,21 @@
 import ScreenSaver
 
 let stepDuration: UInt8 = 10
-let pauseDuration: UInt8 = 10
-let spawnRelax = 40
+let pauseDuration: UInt8 = 2
+let spawnRelax = 3000 // TODO: change to 3
 
 let screenSize: CGRect = NSScreen.main!.frame
 let screenWidth: UInt16 = UInt16(screenSize.width)
 let screenHeight: UInt16 = UInt16(screenSize.height)
 let boxesX: UInt16 = 32
 let boxesY: UInt16 = (boxesX * screenHeight) / screenWidth
+let totalNrBoxes: UInt16 = boxesX * boxesY
+let squareSparcity: UInt16 = 4
+
 let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
+let edgeRadius: CGFloat = 15
+let fillColor = NSColor(red: 0, green: 0, blue: 0, alpha: 0.5)
+let edgeWidth: CGFloat = 5
 
 class square {
     init() {
@@ -111,7 +117,6 @@ class square {
     
     private func grow() {
         color = NSColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent, alpha: CGFloat(Float(progress) / Float(stepDuration)))
-//        color = NSColor(red: 1, green: 0, blue: 0, alpha: 1)
     }
     private func shrink() {
         color = NSColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent, alpha: 1.0 - CGFloat(Float(progress) / Float(stepDuration)))
@@ -119,13 +124,22 @@ class square {
     
     public func draw() {
         let shapeRect = NSRect(x: currentPosition.x, y: currentPosition.y, width: CGFloat(boxSize), height: CGFloat(boxSize))
-        let shape = NSBezierPath(roundedRect: shapeRect, xRadius: 15, yRadius: 15)
+        let shape = NSBezierPath(roundedRect: shapeRect, xRadius: edgeRadius, yRadius: edgeRadius)
         color.setFill()
         shape.fill()
+        
+        let fillRect = NSRect(x: currentPosition.x+edgeWidth, y: currentPosition.y+edgeWidth, width: CGFloat(boxSize-2*edgeWidth), height: CGFloat(boxSize-2*edgeWidth))
+        fillColor.setFill()
+        let fillShape = NSBezierPath(roundedRect: fillRect, xRadius: edgeRadius-edgeWidth, yRadius: edgeRadius-edgeWidth)
+        fillShape.fill()
     }
     
     public func getCurrentCell() -> CGPoint {
         return currentCell
+    }
+    
+    public func getTargetCell() -> CGPoint {
+        return targetCell
     }
     
     public func getLastDirection() -> String {
@@ -142,7 +156,8 @@ class squaresView: ScreenSaverView {
     private let paddleBottomOffset: CGFloat = 100
     private let paddleSize = NSSize(width: 60, height: 20)
     
-    private var testSquare: square = square() // TODO: construct squares on the run
+    private var initTimer: UInt16 = 0
+    private var squares: [square] = []
 
     // MARK: - Initialization
     override init?(frame: NSRect, isPreview: Bool) {
@@ -157,119 +172,82 @@ class squaresView: ScreenSaverView {
     // MARK: - Lifecycle
     override func draw(_ rect: NSRect) {
         drawBackground(.black)
-        testSquare.draw()
-        
-//        drawBall()
-//        drawPaddle()
+        for activeSquare in squares {
+            activeSquare.draw()
+        }
     }
 
     override func animateOneFrame() {
         super.animateOneFrame()
         
-        if testSquare.getState() == "inactive" {
-            testSquare.activate(position: CGPoint(x: Int.random(in: 0..<Int(boxesX)), y: Int.random(in: 0..<Int(boxesY))), newColor: NSColor(red: Double.random(in: 0.25...1.0), green: Double.random(in: 0.25...1.0), blue: Double.random(in: 0.25...1.0), alpha: 0.0))
+        if squares.count < totalNrBoxes/squareSparcity && Int(initTimer)%spawnRelax == 0 {
+            createNewSquare()
         }
-        else if testSquare.getState() == "idle" {
-            if testSquare.getAge() == 100 {
-                testSquare.initNextAction(newState: "shrink")
+        
+        for activeSquare in squares {
+            if activeSquare.getState() == "idle" {
+                if activeSquare.getAge() == 10 {
+                    activeSquare.initNextAction(newState: "shrink")
+                }
+                else {
+                    var moveDirections: [String] = []
+                    let testSquareCurrentCell = activeSquare.getCurrentCell()
+                    if testSquareCurrentCell.x > 0 && activeSquare.getLastDirection() != "right" {
+                        moveDirections.append("moveLeft")
+                    }
+                    if testSquareCurrentCell.x < CGFloat(boxesX - 1) && activeSquare.getLastDirection() != "left" {
+                        moveDirections.append("moveRight")
+                    }
+                    if testSquareCurrentCell.y > 0 && activeSquare.getLastDirection() != "up" {
+                        moveDirections.append("moveDown")
+                    }
+                    if testSquareCurrentCell.y < CGFloat(boxesY - 1) && activeSquare.getLastDirection() != "down" {
+                        moveDirections.append("moveUp")
+                    }
+                    let moveDirection = moveDirections.randomElement()!
+                    activeSquare.initNextAction(newState: moveDirection)
+                }
             }
             else {
-                var moveDirections: [String] = []
-                let testSquareCurrentCell = testSquare.getCurrentCell()
-                if testSquareCurrentCell.x > 0 && testSquare.getLastDirection() != "right" {
-                    moveDirections.append("moveLeft")
-                }
-                if testSquareCurrentCell.x < CGFloat(boxesX - 1) && testSquare.getLastDirection() != "left" {
-                    moveDirections.append("moveRight")
-                }
-                if testSquareCurrentCell.y > 0 && testSquare.getLastDirection() != "up" {
-                    moveDirections.append("moveDown")
-                }
-                if testSquareCurrentCell.y < CGFloat(boxesY - 1) && testSquare.getLastDirection() != "down" {
-                    moveDirections.append("moveUp")
-                }
-                let moveDirection = moveDirections.randomElement()!
-                testSquare.initNextAction(newState: moveDirection)
+                activeSquare.makeProgress()
             }
         }
-        else {
-            testSquare.makeProgress()
+        for i in 0...squares.count-1 {
+            if squares[i].getState() == "inactive" {
+                squares.remove(at: i)
+            }
         }
-
-//        let oobAxes = ballIsOOB()
-//        if oobAxes.xAxis {
-//            ballVelocity.dx *= -1
-//        }
-//        if oobAxes.yAxis {
-//            ballVelocity.dy *= -1
-//        }
-//
-//        let paddleContact = ballHitPaddle()
-//        if paddleContact {
-//            ballVelocity.dy *= -1
-//        }
-//
-//        ballPosition.x += ballVelocity.dx
-//        ballPosition.y += ballVelocity.dy
-//        paddlePosition = ballPosition.x
+        
+        initTimer += 1
 
         setNeedsDisplay(bounds)
     }
 
-    // MARK: - Helper Functions
     private func drawBackground(_ color: NSColor) {
         let background = NSBezierPath(rect: bounds)
         color.setFill()
         background.fill()
     }
-
-    private func drawBall() {
-        let ballRect = NSRect(x: ballPosition.x - ballRadius,
-                              y: ballPosition.y - ballRadius,
-                              width: ballRadius * 2,
-                              height: ballRadius * 2)
-        let ball = NSBezierPath(roundedRect: ballRect,
-                                xRadius: ballRadius,
-                                yRadius: ballRadius)
-        NSColor.white.setFill()
-        ball.fill()
+    
+    private func createNewSquare() {
+        squares.append(square())
+        var cellCandidate: CGPoint
+        repeat {
+            cellCandidate = CGPoint(x: Int.random(in: 0..<Int(boxesX)), y: Int.random(in: 0..<Int(boxesY)))
+        }
+        while (!cellIsEmpty(cell: cellCandidate))
+        squares[squares.endIndex].activate(position: cellCandidate, newColor: NSColor(red: Double.random(in: 0.25...1.0), green: Double.random(in: 0.25...1.0), blue: Double.random(in: 0.25...1.0), alpha: 0.0))
     }
-
-    private func drawPaddle() {
-        let paddleRect = NSRect(x: paddlePosition - paddleSize.width / 2,
-                                y: paddleBottomOffset - paddleSize.height / 2,
-                                width: paddleSize.width,
-                                height: paddleSize.height)
-        let paddle = NSBezierPath(rect: paddleRect)
-        NSColor.white.setFill()
-        paddle.fill()
-    }
-
-    private func initialVelocity() -> CGVector {
-        let desiredVelocityMagnitude: CGFloat = 10
-        let xVelocity = CGFloat.random(in: 2.5...7.5)
-        let xSign: CGFloat = Bool.random() ? 1 : -1
-        let yVelocity = sqrt(pow(desiredVelocityMagnitude, 2) - pow(xVelocity, 2))
-        let ySign: CGFloat = Bool.random() ? 1 : -1
-        return CGVector(dx: xVelocity * xSign, dy: yVelocity * ySign)
-    }
-
-    private func ballIsOOB() -> (xAxis: Bool, yAxis: Bool) {
-        let xAxisOOB = ballPosition.x - ballRadius <= 0 ||
-            ballPosition.x + ballRadius >= bounds.width
-        let yAxisOOB = ballPosition.y - ballRadius <= 0 ||
-            ballPosition.y + ballRadius >= bounds.height
-        return (xAxisOOB, yAxisOOB)
-    }
-
-    private func ballHitPaddle() -> Bool {
-        let xBounds = (lower: paddlePosition - paddleSize.width / 2,
-                       upper: paddlePosition + paddleSize.width / 2)
-        let yBounds = (lower: paddleBottomOffset - paddleSize.height / 2,
-                       upper: paddleBottomOffset + paddleSize.height / 2)
-        return ballPosition.x >= xBounds.lower &&
-            ballPosition.x <= xBounds.upper &&
-            ballPosition.y - ballRadius >= yBounds.lower &&
-            ballPosition.y - ballRadius <= yBounds.upper
+    
+    private func cellIsEmpty(cell: CGPoint) -> Bool {
+        for activeSquare in squares {
+            if cell == activeSquare.getCurrentCell() {
+                return false
+            }
+            if cell == activeSquare.getTargetCell() {
+                return false
+            }
+        }
+        return true
     }
 }
