@@ -4,8 +4,12 @@ let stepDuration: UInt8 = 10
 let pauseDuration: UInt8 = 10
 let spawnRelax = 40
 
-let screenSize: CGRect = NSScreen.main!.frame // doesn't work yet
-let boxSize: CGFloat = screenSize.width / 16
+let screenSize: CGRect = NSScreen.main!.frame
+let screenWidth: UInt16 = UInt16(screenSize.width)
+let screenHeight: UInt16 = UInt16(screenSize.height)
+let boxesX: UInt16 = 32
+let boxesY: UInt16 = (boxesX * screenHeight) / screenWidth
+let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
 
 class square {
     init() {
@@ -23,6 +27,7 @@ class square {
     private var currentPosition: CGPoint
     private var color: NSColor = NSColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
     private var age: UInt8
+    private var lastDirection = "none"
     
     public func activate(position: CGPoint, newColor: NSColor) {
         currentCell = position
@@ -37,21 +42,25 @@ class square {
             state = "move"
             targetCell.x = currentCell.x
             targetCell.y = currentCell.y+1
+            lastDirection = "up"
         }
         else if newState == "moveRight" {
             state = "move"
             targetCell.x = currentCell.x+1
             targetCell.y = currentCell.y
+            lastDirection = "right"
         }
         else if newState == "moveDown" {
             state = "move"
             targetCell.x = currentCell.x
             targetCell.y = currentCell.y-1
+            lastDirection = "down"
         }
         else if newState == "moveLeft" {
             state = "move"
             targetCell.x = currentCell.x-1
             targetCell.y = currentCell.y
+            lastDirection = "left"
         }
         else {
             state = newState
@@ -69,8 +78,13 @@ class square {
             }
         }
         else if state == "move" {
+//            let phase = 0.5 - 0.5 + cos(Double.pi * Double(progress) / Double(stepDuration)) // New code, but doesn't work
+//            currentPosition.x = CGFloat(boxSize) * CGFloat((targetCell.x-currentCell.x) * phase + currentCell.x)
+//            currentPosition.y = CGFloat(boxSize) * CGFloat((targetCell.y-currentCell.y) * phase + currentCell.y)
+            
             currentPosition.x = boxSize*currentCell.x + boxSize*(targetCell.x-currentCell.x)*(0.5-0.5*cos(CGFloat(Double.pi)*CGFloat(progress)/CGFloat(stepDuration)))
             currentPosition.y = boxSize*currentCell.y + boxSize*(targetCell.y-currentCell.y)*(0.5-0.5*cos(CGFloat(Double.pi)*CGFloat(progress)/CGFloat(stepDuration)))
+            
             if progress == stepDuration {
                 currentCell = targetCell
                 state = "idle"
@@ -104,10 +118,18 @@ class square {
     }
     
     public func draw() {
-        let shapeRect = NSRect(x: currentPosition.x, y: currentPosition.y, width: boxSize, height: boxSize)
-        let shape = NSBezierPath(rect: shapeRect)
+        let shapeRect = NSRect(x: currentPosition.x, y: currentPosition.y, width: CGFloat(boxSize), height: CGFloat(boxSize))
+        let shape = NSBezierPath(roundedRect: shapeRect, xRadius: 15, yRadius: 15)
         color.setFill()
         shape.fill()
+    }
+    
+    public func getCurrentCell() -> CGPoint {
+        return currentCell
+    }
+    
+    public func getLastDirection() -> String {
+        return lastDirection
     }
 }
 
@@ -145,14 +167,27 @@ class squaresView: ScreenSaverView {
         super.animateOneFrame()
         
         if testSquare.getState() == "inactive" {
-            testSquare.activate(position: CGPoint(x: Int.random(in: 0..<Int(screenSize.width/boxSize)), y: Int.random(in: 0..<Int(screenSize.height/boxSize))), newColor: NSColor(red: Double.random(in: 0.25...1.0), green: Double.random(in: 0.25...1.0), blue: Double.random(in: 0.25...1.0), alpha: 0.0))
+            testSquare.activate(position: CGPoint(x: Int.random(in: 0..<Int(boxesX)), y: Int.random(in: 0..<Int(boxesY))), newColor: NSColor(red: Double.random(in: 0.25...1.0), green: Double.random(in: 0.25...1.0), blue: Double.random(in: 0.25...1.0), alpha: 0.0))
         }
         else if testSquare.getState() == "idle" {
-            if testSquare.getAge() == 5 {
+            if testSquare.getAge() == 100 {
                 testSquare.initNextAction(newState: "shrink")
             }
             else {
-                let moveDirections = ["moveUp", "moveRight", "moveDown", "moveLeft"]
+                var moveDirections: [String] = []
+                let testSquareCurrentCell = testSquare.getCurrentCell()
+                if testSquareCurrentCell.x > 0 && testSquare.getLastDirection() != "right" {
+                    moveDirections.append("moveLeft")
+                }
+                if testSquareCurrentCell.x < CGFloat(boxesX - 1) && testSquare.getLastDirection() != "left" {
+                    moveDirections.append("moveRight")
+                }
+                if testSquareCurrentCell.y > 0 && testSquare.getLastDirection() != "up" {
+                    moveDirections.append("moveDown")
+                }
+                if testSquareCurrentCell.y < CGFloat(boxesY - 1) && testSquare.getLastDirection() != "down" {
+                    moveDirections.append("moveUp")
+                }
                 let moveDirection = moveDirections.randomElement()!
                 testSquare.initNextAction(newState: moveDirection)
             }
