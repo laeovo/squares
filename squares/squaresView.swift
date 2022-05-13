@@ -13,9 +13,11 @@ let totalNrBoxes: UInt16 = boxesX * boxesY
 let squareSparcity: UInt16 = 5
 
 let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
-let edgeRadius: CGFloat = 15
 let fillColor = NSColor(red: 0, green: 0, blue: 0, alpha: 0.5)
-let edgeWidth: CGFloat = 6
+let cornerRadiusProportion: CGFloat = 0.25
+let cornerRadius: CGFloat = boxSize * cornerRadiusProportion
+let edgeWidthProportion: CGFloat = 0.1
+let edgeWidth: CGFloat = boxSize * edgeWidthProportion
 
 let hueVariation: Double = 0.05
 let hueSpeed: Double = 0.0005
@@ -135,13 +137,13 @@ class square {
     
     public func draw() {
         let shapeRect = NSRect(x: currentPosition.x, y: currentPosition.y, width: CGFloat(boxSize), height: CGFloat(boxSize))
-        let shape = NSBezierPath(roundedRect: shapeRect, xRadius: edgeRadius, yRadius: edgeRadius)
+        let shape = NSBezierPath(roundedRect: shapeRect, xRadius: cornerRadius, yRadius: cornerRadius)
         color.setFill()
         shape.fill()
         
         let fillRect = NSRect(x: currentPosition.x+edgeWidth, y: currentPosition.y+edgeWidth, width: CGFloat(boxSize-2*edgeWidth), height: CGFloat(boxSize-2*edgeWidth))
         fillColor.setFill()
-        let fillShape = NSBezierPath(roundedRect: fillRect, xRadius: edgeRadius-edgeWidth, yRadius: edgeRadius-edgeWidth)
+        let fillShape = NSBezierPath(roundedRect: fillRect, xRadius: cornerRadius-edgeWidth, yRadius: cornerRadius-edgeWidth)
         fillShape.fill()
     }
     
