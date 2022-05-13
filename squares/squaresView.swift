@@ -1,28 +1,31 @@
 import ScreenSaver
 
 let stepDuration: UInt8 = 10
-let pauseDuration: UInt8 = 2
 let spawnRelax = 1
 
 let screenSize: CGRect = NSScreen.main!.frame
 let screenWidth: UInt16 = UInt16(screenSize.width)
 let screenHeight: UInt16 = UInt16(screenSize.height)
-let boxesX: UInt16 = 32
+let boxesX: UInt16 = 48
 let boxesY: UInt16 = (boxesX * screenHeight) / screenWidth
 let totalNrBoxes: UInt16 = boxesX * boxesY
-let squareSparcity: UInt16 = 1
+let squareSparcity: UInt16 = 5
 
 let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
 let edgeRadius: CGFloat = 15
 let fillColor = NSColor(red: 0, green: 0, blue: 0, alpha: 0.5)
-let edgeWidth: CGFloat = 5
+let edgeWidth: CGFloat = 6
 
-let hueVariation = 0.1
-let hueSpeed = 0.001
-let sat = 0.3
+let hueVariation: Double = 0.05
+let hueSpeed: Double = 0.0005
+let sat: Double = 0.9
+let satVariation: Double = 0.1
+let brt: Double = 0.7
+let brtVariation: Double = 0.3
+
 let minAge = 20
-let maxAge = 30
 let chanceOfDeath = 0.5
+let maxAge = 30
 
 class square {
     init() {
@@ -257,7 +260,14 @@ class squaresView: ScreenSaverView {
         }
         while !cellIsEmpty(cell: cellCandidate) && tries < squares.count
         if cellIsEmpty(cell: cellCandidate) {
-            newSquare.activate(position: cellCandidate, newColor: NSColor(hue: Double.random(in: currentHue-hueVariation...currentHue-hueVariation).truncatingRemainder(dividingBy: 1), saturation: sat, brightness: 1.0, alpha: 0.0))
+            var hue: Double = Double.random(in: currentHue-hueVariation...currentHue+hueVariation)
+            while hue > 1 {
+                hue -= 1
+            }
+            while hue < 0 {
+                hue += 1
+            }
+            newSquare.activate(position: cellCandidate, newColor: NSColor(hue: hue, saturation: Double.random(in: max(sat-satVariation, 0)...min(sat+satVariation, 1)), brightness: Double.random(in: max(brt-brtVariation, 0)...min(brt+brtVariation, 1)), alpha: 0.0))
             squares.append(newSquare)
         }
     }
