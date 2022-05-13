@@ -2,12 +2,13 @@ import ScreenSaver
 
 let stepDuration: UInt8 = 10
 let spawnRelax = 1
+let spawnAtOnce = 2
 
 let screenSize: CGRect = NSScreen.main!.frame
 let screenWidth: UInt16 = UInt16(screenSize.width)
 let screenHeight: UInt16 = UInt16(screenSize.height)
-let boxesX: UInt16 = 48
-let boxesY: UInt16 = (boxesX * screenHeight) / screenWidth
+let boxesX: UInt16 = 32
+let boxesY: UInt16 = UInt16((UInt32(boxesX) * UInt32(screenHeight)) / UInt32(screenWidth))
 let totalNrBoxes: UInt16 = boxesX * boxesY
 let squareSparcity: UInt16 = 5
 
@@ -192,7 +193,9 @@ class squaresView: ScreenSaverView {
         super.animateOneFrame()
         
         if squares.count < totalNrBoxes/squareSparcity && Int(initTimer)%Int(spawnRelax) == 0 {
-            createNewSquare()
+            for _ in 1...spawnAtOnce {
+                createNewSquare()
+            }
         }
         initTimer += 1
         
