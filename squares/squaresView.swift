@@ -2,7 +2,7 @@ import ScreenSaver
 
 let stepDuration: UInt8 = 10
 let pauseDuration: UInt8 = 2
-let spawnRelax = 3000 // TODO: change to 3
+let spawnRelax = 1
 
 let screenSize: CGRect = NSScreen.main!.frame
 let screenWidth: UInt16 = UInt16(screenSize.width)
@@ -10,12 +10,19 @@ let screenHeight: UInt16 = UInt16(screenSize.height)
 let boxesX: UInt16 = 32
 let boxesY: UInt16 = (boxesX * screenHeight) / screenWidth
 let totalNrBoxes: UInt16 = boxesX * boxesY
-let squareSparcity: UInt16 = 4
+let squareSparcity: UInt16 = 1
 
 let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
 let edgeRadius: CGFloat = 15
 let fillColor = NSColor(red: 0, green: 0, blue: 0, alpha: 0.5)
 let edgeWidth: CGFloat = 5
+
+let hueVariation = 0.1
+let hueSpeed = 0.001
+let sat = 0.3
+let minAge = 20
+let maxAge = 30
+let chanceOfDeath = 0.5
 
 class square {
     init() {
@@ -158,6 +165,7 @@ class squaresView: ScreenSaverView {
     
     private var initTimer: UInt16 = 0
     private var squares: [square] = []
+    private var currentHue: Double = Double.random(in: 0...1)
 
     // MARK: - Initialization
     override init?(frame: NSRect, isPreview: Bool) {
@@ -180,46 +188,56 @@ class squaresView: ScreenSaverView {
     override func animateOneFrame() {
         super.animateOneFrame()
         
-        if squares.count < totalNrBoxes/squareSparcity && Int(initTimer)%spawnRelax == 0 {
+        if squares.count < totalNrBoxes/squareSparcity && Int(initTimer)%Int(spawnRelax) == 0 {
             createNewSquare()
         }
+        initTimer += 1
         
         for activeSquare in squares {
             if activeSquare.getState() == "idle" {
-                if activeSquare.getAge() == 10 {
+                if (activeSquare.getAge() > minAge && Double.random(in: 0.0...1) < chanceOfDeath) || activeSquare.getAge() > maxAge {
                     activeSquare.initNextAction(newState: "shrink")
                 }
                 else {
                     var moveDirections: [String] = []
-                    let testSquareCurrentCell = activeSquare.getCurrentCell()
-                    if testSquareCurrentCell.x > 0 && activeSquare.getLastDirection() != "right" {
+                    let activeSquareCurrentCell = activeSquare.getCurrentCell()
+                    if activeSquareCurrentCell.x > 0 && activeSquare.getLastDirection() != "right" && cellIsEmpty(cell: CGPoint(x: activeSquareCurrentCell.x-1, y: activeSquareCurrentCell.y)) {
                         moveDirections.append("moveLeft")
                     }
-                    if testSquareCurrentCell.x < CGFloat(boxesX - 1) && activeSquare.getLastDirection() != "left" {
+                    if activeSquareCurrentCell.x < CGFloat(boxesX - 1) && activeSquare.getLastDirection() != "left" && cellIsEmpty(cell: CGPoint(x: activeSquareCurrentCell.x+1, y: activeSquareCurrentCell.y)) {
                         moveDirections.append("moveRight")
                     }
-                    if testSquareCurrentCell.y > 0 && activeSquare.getLastDirection() != "up" {
+                    if activeSquareCurrentCell.y > 0 && activeSquare.getLastDirection() != "up" && cellIsEmpty(cell: CGPoint(x: activeSquareCurrentCell.x, y: activeSquareCurrentCell.y-1)) {
                         moveDirections.append("moveDown")
                     }
-                    if testSquareCurrentCell.y < CGFloat(boxesY - 1) && activeSquare.getLastDirection() != "down" {
+                    if activeSquareCurrentCell.y < CGFloat(boxesY - 1) && activeSquare.getLastDirection() != "down" && cellIsEmpty(cell: CGPoint(x: activeSquareCurrentCell.x, y: activeSquareCurrentCell.y+1)) {
                         moveDirections.append("moveUp")
                     }
-                    let moveDirection = moveDirections.randomElement()!
-                    activeSquare.initNextAction(newState: moveDirection)
+                    if moveDirections.isEmpty {
+                        activeSquare.initNextAction(newState: "shrink")
+                    }
+                    else {
+                        let moveDirection = moveDirections.randomElement()!
+                        activeSquare.initNextAction(newState: moveDirection)
+                    }
                 }
             }
             else {
                 activeSquare.makeProgress()
             }
         }
+        
+        // remove dead squares
+        var removedSquares = 0
         for i in 0...squares.count-1 {
-            if squares[i].getState() == "inactive" {
-                squares.remove(at: i)
+            let index = i - removedSquares
+            if squares[index].getState() == "inactive" {
+                squares.remove(at: index)
+                removedSquares += 1
             }
         }
-        
-        initTimer += 1
 
+        currentHue += hueSpeed
         setNeedsDisplay(bounds)
     }
 
@@ -230,13 +248,18 @@ class squaresView: ScreenSaverView {
     }
     
     private func createNewSquare() {
-        squares.append(square())
+        let newSquare = square()
         var cellCandidate: CGPoint
+        var tries = 0
         repeat {
             cellCandidate = CGPoint(x: Int.random(in: 0..<Int(boxesX)), y: Int.random(in: 0..<Int(boxesY)))
+            tries += 1
         }
-        while (!cellIsEmpty(cell: cellCandidate))
-        squares[squares.endIndex].activate(position: cellCandidate, newColor: NSColor(red: Double.random(in: 0.25...1.0), green: Double.random(in: 0.25...1.0), blue: Double.random(in: 0.25...1.0), alpha: 0.0))
+        while !cellIsEmpty(cell: cellCandidate) && tries < squares.count
+        if cellIsEmpty(cell: cellCandidate) {
+            newSquare.activate(position: cellCandidate, newColor: NSColor(hue: Double.random(in: currentHue-hueVariation...currentHue-hueVariation).truncatingRemainder(dividingBy: 1), saturation: sat, brightness: 1.0, alpha: 0.0))
+            squares.append(newSquare)
+        }
     }
     
     private func cellIsEmpty(cell: CGPoint) -> Bool {
