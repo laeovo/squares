@@ -2,12 +2,12 @@ import ScreenSaver
 
 let stepDuration: UInt8 = 13
 let spawnRelax = 1
-let spawnAtOnce = 2
+let spawnAtOnce = 1
 
 let screenSize: CGRect = NSScreen.main!.frame
 let screenWidth: UInt16 = UInt16(screenSize.width)
 let screenHeight: UInt16 = UInt16(screenSize.height)
-let boxesX: UInt16 = 32
+let boxesX: UInt16 = 48
 let boxesY: UInt16 = UInt16((UInt32(boxesX) * UInt32(screenHeight)) / UInt32(screenWidth))
 let totalNrBoxes: UInt16 = boxesX * boxesY
 let squareSparcity: UInt16 = 5
@@ -19,8 +19,9 @@ let cornerRadius: CGFloat = boxSize * cornerRadiusProportion
 let edgeWidthProportion: CGFloat = 0.12
 let edgeWidth: CGFloat = boxSize * edgeWidthProportion
 
+var currentHue: Double = Double.random(in: 0...1)
 let hueVariation: Double = 0.005
-let hueBasicSpeed: Double = 0.9995
+let hueBasicSpeed: Double = 0.0003
 let nrHues: Double = 2
 let hueSpeed: Double = hueBasicSpeed + 1/nrHues
 let sat: Double = 0.9
@@ -174,7 +175,6 @@ class squaresView: ScreenSaverView {
     
     private var initTimer: UInt16 = 0
     private var squares: [square] = []
-    private var currentHue: Double = Double.random(in: 0...1)
 
     // MARK: - Initialization
     override init?(frame: NSRect, isPreview: Bool) {
