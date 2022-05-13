@@ -1,6 +1,6 @@
 import ScreenSaver
 
-let stepDuration: UInt8 = 10
+let stepDuration: UInt8 = 13
 let spawnRelax = 1
 let spawnAtOnce = 2
 
@@ -19,16 +19,18 @@ let cornerRadius: CGFloat = boxSize * cornerRadiusProportion
 let edgeWidthProportion: CGFloat = 0.12
 let edgeWidth: CGFloat = boxSize * edgeWidthProportion
 
-let hueVariation: Double = 0.05
-let hueSpeed: Double = 0.0005
+let hueVariation: Double = 0.005
+let hueBasicSpeed: Double = 0.9995
+let nrHues: Double = 2
+let hueSpeed: Double = hueBasicSpeed + 1/nrHues
 let sat: Double = 0.9
 let satVariation: Double = 0.1
 let brt: Double = 0.7
 let brtVariation: Double = 0.3
 
-let minAge = 20
+let minAge = 10
 let chanceOfDeath = 0.5
-let maxAge = 30
+let maxAge = 10
 
 class square {
     init() {
@@ -97,12 +99,13 @@ class square {
             }
         }
         else if state == "move" {
-//            let phase = 0.5 - 0.5 + cos(Double.pi * Double(progress) / Double(stepDuration)) // New code, but doesn't work
-//            currentPosition.x = CGFloat(boxSize) * CGFloat((targetCell.x-currentCell.x) * phase + currentCell.x)
-//            currentPosition.y = CGFloat(boxSize) * CGFloat((targetCell.y-currentCell.y) * phase + currentCell.y)
-            
-            currentPosition.x = boxSize*currentCell.x + boxSize*(targetCell.x-currentCell.x)*(0.5-0.5*cos(CGFloat(Double.pi)*CGFloat(progress)/CGFloat(stepDuration)))
-            currentPosition.y = boxSize*currentCell.y + boxSize*(targetCell.y-currentCell.y)*(0.5-0.5*cos(CGFloat(Double.pi)*CGFloat(progress)/CGFloat(stepDuration)))
+            let phase = Double(progress) / Double(stepDuration)
+            // movedPhase: [0, 1] --> [0, 1]
+//            let movedPhase = phase // linear
+            let movedPhase = 0.5 - 0.5 * cos(Double.pi * phase) // cosine-ish
+//            let movedPhase = 0.5 - 0.5 * cos(Double.pi * phase) // accelerated cosine
+            currentPosition.x = boxSize * CGFloat((targetCell.x-currentCell.x) * movedPhase + currentCell.x)
+            currentPosition.y = boxSize * CGFloat((targetCell.y-currentCell.y) * movedPhase + currentCell.y)
             
             if progress == stepDuration {
                 currentCell = targetCell
