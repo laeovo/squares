@@ -14,9 +14,9 @@ let squareSparcity: UInt16 = 5
 
 let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
 let fillColor = NSColor(red: 0, green: 0, blue: 0, alpha: 0.5)
-let cornerRadiusProportion: CGFloat = 0.25
+let cornerRadiusProportion: CGFloat = 0.35
 let cornerRadius: CGFloat = boxSize * cornerRadiusProportion
-let edgeWidthProportion: CGFloat = 0.1
+let edgeWidthProportion: CGFloat = 0.12
 let edgeWidth: CGFloat = boxSize * edgeWidthProportion
 
 let hueVariation: Double = 0.05
