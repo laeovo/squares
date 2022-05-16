@@ -1,8 +1,8 @@
 import ScreenSaver
 
-let stepDuration: UInt8 = 13
+let stepDuration: UInt8 = 15
 let spawnRelax = 1
-let spawnAtOnce = 2
+let spawnAtOnce = 1
 
 let screenSize: CGRect = NSScreen.main!.frame
 let screenWidth: UInt16 = UInt16(screenSize.width)
@@ -14,13 +14,13 @@ let squareSparcity: UInt16 = 5
 
 let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
 let fillColor = NSColor(red: 0, green: 0, blue: 0, alpha: 0.5)
-let cornerRadiusProportion: CGFloat = 0.35
+let cornerRadiusProportion: CGFloat = 0.25
 let cornerRadius: CGFloat = boxSize * cornerRadiusProportion
 let edgeWidthProportion: CGFloat = 0.12
 let edgeWidth: CGFloat = boxSize * edgeWidthProportion
 
-let hueVariation: Double = 0.005
-let hueBasicSpeed: Double = 0.9995
+let hueVariation: Double = 0.01
+let hueBasicSpeed: Double = -0.0005
 let nrHues: Double = 2
 let hueSpeed: Double = hueBasicSpeed + 1/nrHues
 let sat: Double = 0.9
@@ -30,7 +30,7 @@ let brtVariation: Double = 0.3
 
 let minAge = 10
 let chanceOfDeath = 0.5
-let maxAge = 10
+let maxAge = 20
 
 class square {
     init() {
