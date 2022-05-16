@@ -4,13 +4,20 @@ let stepDuration: UInt8 = 15
 let spawnRelax = 1
 let spawnAtOnce = 1
 
+let trailLength: UInt8 = 0
+let particleSize: CGFloat = 6
+let particleDecay: Double = 0.02
+let particleSpeed: CGFloat = 1
+let particleSpeedVariation: Double = 0.4
+let particleSpeedDecay: CGFloat = 1.2
+
 let screenSize: CGRect = NSScreen.main!.frame
 let screenWidth: UInt16 = UInt16(screenSize.width)
 let screenHeight: UInt16 = UInt16(screenSize.height)
-let boxesX: UInt16 = 32
+let boxesX: UInt16 = 24
 let boxesY: UInt16 = UInt16((UInt32(boxesX) * UInt32(screenHeight)) / UInt32(screenWidth))
 let totalNrBoxes: UInt16 = boxesX * boxesY
-let squareSparcity: UInt16 = 5
+let squareSparcity: UInt16 = 2
 
 let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
 let fillColor = NSColor(red: 0, green: 0, blue: 0, alpha: 0.5)
@@ -19,9 +26,10 @@ let cornerRadius: CGFloat = boxSize * cornerRadiusProportion
 let edgeWidthProportion: CGFloat = 0.12
 let edgeWidth: CGFloat = boxSize * edgeWidthProportion
 
-let hueVariation: Double = 0.01
-let hueBasicSpeed: Double = -0.0005
 let nrHues: Double = 2
+var currentHue: Double = Double.random(in: 0...1)
+let hueVariation: Double = 0.01
+let hueBasicSpeed: Double = 0.0005
 let hueSpeed: Double = hueBasicSpeed + 1/nrHues
 let sat: Double = 0.9
 let satVariation: Double = 0.1
@@ -31,6 +39,43 @@ let brtVariation: Double = 0.3
 let minAge = 10
 let chanceOfDeath = 0.5
 let maxAge = 20
+
+class Particle {
+    private var speed: CGVector = .zero
+    private var position: CGPoint = .zero
+    private var color: NSColor
+    private var alive: Bool
+    
+    init(newColor: NSColor, newPosition: CGPoint, newSpeed: CGVector) {
+        color = newColor
+        position = newPosition
+        speed = newSpeed
+        alive = true
+    }
+    
+    public func makeProgress() {
+        color = NSColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent, alpha: color.alphaComponent-particleDecay)
+        position.x += speed.dx
+        position.y += speed.dy
+        if color.alphaComponent < 0.01 {
+            color = NSColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent, alpha: 0)
+            alive = false
+        }
+        speed.dx /= CGFloat.random(in: 1...particleSpeedDecay)
+        speed.dy /= CGFloat.random(in: 1...particleSpeedDecay)
+    }
+    
+    public func draw() {
+        let rect = NSRect(x: position.x, y: position.y, width: particleSize/2, height: particleSize/2)
+        color.setFill()
+        let shape = NSBezierPath(roundedRect: rect, xRadius: particleSize/2, yRadius: particleSize/2)
+        shape.fill()
+    }
+    
+    public func isAlive() -> Bool {
+        return alive
+    }
+}
 
 class square {
     init() {
@@ -49,6 +94,8 @@ class square {
     private var color: NSColor = NSColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
     private var age: UInt8
     private var lastDirection = "none"
+    private var history: [CGPoint] = []
+    private var particles: [Particle] = []
     
     public func activate(position: CGPoint, newColor: NSColor) {
         currentCell = position
@@ -56,9 +103,11 @@ class square {
         currentPosition = CGPoint(x: CGFloat(boxSize)*currentCell.x, y: CGFloat(boxSize)*currentCell.y)
         initNextAction(newState: "grow")
         color = newColor
+        history.append(position)
     }
     
     public func initNextAction(newState: String) {
+        
         if newState == "moveUp" {
             state = "move"
             targetCell.x = currentCell.x
@@ -86,11 +135,33 @@ class square {
         else {
             state = newState
         }
+        if state == "move" {
+            history.append(targetCell)
+            if history.count > 2+trailLength {
+                history.remove(at: 0)
+            }
+        }
         progress = 0
     }
     
     public func makeProgress() {
+        // remove dead particles
+        var removedParticles = 0
+        if !particles.isEmpty {
+            for i in 0...particles.count-1 {
+                let index = i - removedParticles
+                if !particles[index].isAlive() {
+                    particles.remove(at: index)
+                    removedParticles += 1
+                }
+            }
+        }
+        
         progress += 1
+        for particle in particles {
+            particle.makeProgress()
+        }
+        
         if state == "grow" {
             grow()
             if progress == stepDuration {
@@ -106,6 +177,7 @@ class square {
 //            let movedPhase = 0.5 - 0.5 * cos(Double.pi * phase) // accelerated cosine
             currentPosition.x = boxSize * CGFloat((targetCell.x-currentCell.x) * movedPhase + currentCell.x)
             currentPosition.y = boxSize * CGFloat((targetCell.y-currentCell.y) * movedPhase + currentCell.y)
+//            particles.append(Particle(newColor: color, newPosition: CGPoint(x: currentPosition.x+CGFloat.random(in: boxSize/4...3*boxSize/4), y: currentPosition.y+CGFloat.random(in: boxSize/4...3*boxSize/4)), newSpeed: CGVector(dx: particleSpeed * (targetCell.x-currentCell.x+CGFloat.random(in: -particleSpeedVariation...particleSpeedVariation)), dy: particleSpeed * (targetCell.y-currentCell.y+CGFloat.random(in: -particleSpeedVariation...particleSpeedVariation)))))
             
             if progress == stepDuration {
                 currentCell = targetCell
@@ -115,7 +187,7 @@ class square {
         }
         else if state == "shrink" {
             shrink()
-            if progress == stepDuration {
+            if progress == stepDuration+trailLength*(stepDuration+1) {
                 currentCell = targetCell
                 state = "inactive"
                 age += 1
@@ -139,6 +211,10 @@ class square {
     }
     
     public func draw() {
+        for particle in particles {
+            particle.draw()
+        }
+        
         let shapeRect = NSRect(x: currentPosition.x, y: currentPosition.y, width: CGFloat(boxSize), height: CGFloat(boxSize))
         let shape = NSBezierPath(roundedRect: shapeRect, xRadius: cornerRadius, yRadius: cornerRadius)
         color.setFill()
@@ -150,12 +226,12 @@ class square {
         fillShape.fill()
     }
     
-    public func getCurrentCell() -> CGPoint {
-        return currentCell
+    public func getOccupiedCells() -> [CGPoint] {
+        return history
     }
     
-    public func getTargetCell() -> CGPoint {
-        return targetCell
+    public func getCurrentCell() -> CGPoint {
+        return currentCell
     }
     
     public func getLastDirection() -> String {
@@ -164,17 +240,9 @@ class square {
 }
 
 class squaresView: ScreenSaverView {
-
-    private var ballPosition: CGPoint = .zero
-    private var ballVelocity: CGVector = .zero
-    private var paddlePosition: CGFloat = 0
-    private let ballRadius: CGFloat = 15
-    private let paddleBottomOffset: CGFloat = 100
-    private let paddleSize = NSSize(width: 60, height: 20)
     
-    private var initTimer: UInt16 = 0
+    private var initTimer: UInt64 = 0
     private var squares: [square] = []
-    private var currentHue: Double = Double.random(in: 0...1)
 
     // MARK: - Initialization
     override init?(frame: NSRect, isPreview: Bool) {
@@ -206,7 +274,7 @@ class squaresView: ScreenSaverView {
         
         for activeSquare in squares {
             if activeSquare.getState() == "idle" {
-                if (activeSquare.getAge() > minAge && Double.random(in: 0.0...1) < chanceOfDeath) || activeSquare.getAge() > maxAge {
+                if (activeSquare.getAge() > minAge && Double.random(in: 0.0...1) < chanceOfDeath) || activeSquare.getAge() >= maxAge {
                     activeSquare.initNextAction(newState: "shrink")
                 }
                 else {
@@ -282,11 +350,10 @@ class squaresView: ScreenSaverView {
     
     private func cellIsEmpty(cell: CGPoint) -> Bool {
         for activeSquare in squares {
-            if cell == activeSquare.getCurrentCell() {
-                return false
-            }
-            if cell == activeSquare.getTargetCell() {
-                return false
+            for occupiedCell in activeSquare.getOccupiedCells() {
+                if cell == occupiedCell {
+                    return false
+                }
             }
         }
         return true
