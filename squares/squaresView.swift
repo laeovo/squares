@@ -17,7 +17,7 @@ let screenHeight: UInt16 = UInt16(screenSize.height)
 let boxesX: UInt16 = 24
 let boxesY: UInt16 = UInt16((UInt32(boxesX) * UInt32(screenHeight)) / UInt32(screenWidth))
 let totalNrBoxes: UInt16 = boxesX * boxesY
-let squareSparcity: UInt16 = 2
+let squareSparcity: UInt16 = 5
 
 let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
 let fillColor = NSColor(red: 0, green: 0, blue: 0, alpha: 0.5)
