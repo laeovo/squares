@@ -1,45 +1,5 @@
 import ScreenSaver
 
-let stepDuration: UInt8 = 15
-let spawnRelax = 1
-let spawnAtOnce = 1
-
-let trailLength: UInt8 = 0
-let particleSize: CGFloat = 6
-let particleDecay: Double = 0.02
-let particleSpeed: CGFloat = 1
-let particleSpeedVariation: Double = 0.4
-let particleSpeedDecay: CGFloat = 1.2
-
-let screenSize: CGRect = NSScreen.main!.frame
-let screenWidth: UInt16 = UInt16(screenSize.width)
-let screenHeight: UInt16 = UInt16(screenSize.height)
-let boxesX: UInt16 = 16
-let boxesY: UInt16 = UInt16((UInt32(boxesX) * UInt32(screenHeight)) / UInt32(screenWidth))
-let totalNrBoxes: UInt16 = boxesX * boxesY
-let squareSparcity: UInt16 = 5
-
-let boxSize: CGFloat = CGFloat(screenWidth / boxesX)
-let fillColor = NSColor(red: 0, green: 0, blue: 0, alpha: 0.5)
-let cornerRadiusProportion: CGFloat = 0.25
-let cornerRadius: CGFloat = boxSize * cornerRadiusProportion
-let edgeWidthProportion: CGFloat = 0.12
-let edgeWidth: CGFloat = boxSize * edgeWidthProportion
-
-let nrHues: Double = 2
-var currentHue: Double = Double.random(in: 0...1)
-let hueVariation: Double = 0.01
-let hueBasicSpeed: Double = 0.0005
-let hueSpeed: Double = hueBasicSpeed + 1/nrHues
-let sat: Double = 0.9
-let satVariation: Double = 0.1
-let brt: Double = 0.7
-let brtVariation: Double = 0.3
-
-let minAge = 10
-let chanceOfDeath = 0.5
-let maxAge = 20
-
 class Particle {
     private var speed: CGVector = .zero
     private var position: CGPoint = .zero
@@ -61,8 +21,12 @@ class Particle {
             color = NSColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent, alpha: 0)
             alive = false
         }
+        speed.dx -= particleDrift.dx
         speed.dx /= CGFloat.random(in: 1...particleSpeedDecay)
+        speed.dx += particleDrift.dx
+        speed.dy -= particleDrift.dy
         speed.dy /= CGFloat.random(in: 1...particleSpeedDecay)
+        speed.dy += particleDrift.dy
     }
     
     public func draw() {
@@ -177,7 +141,9 @@ class square {
 //            let movedPhase = 0.5 - 0.5 * cos(Double.pi * phase) // accelerated cosine
             currentPosition.x = boxSize * CGFloat((targetCell.x-currentCell.x) * movedPhase + currentCell.x)
             currentPosition.y = boxSize * CGFloat((targetCell.y-currentCell.y) * movedPhase + currentCell.y)
-//            particles.append(Particle(newColor: color, newPosition: CGPoint(x: currentPosition.x+CGFloat.random(in: boxSize/4...3*boxSize/4), y: currentPosition.y+CGFloat.random(in: boxSize/4...3*boxSize/4)), newSpeed: CGVector(dx: particleSpeed * (targetCell.x-currentCell.x+CGFloat.random(in: -particleSpeedVariation...particleSpeedVariation)), dy: particleSpeed * (targetCell.y-currentCell.y+CGFloat.random(in: -particleSpeedVariation...particleSpeedVariation)))))
+            if particlesActivated {
+                particles.append(Particle(newColor: color, newPosition: CGPoint(x: currentPosition.x+CGFloat.random(in: boxSize/4...3*boxSize/4), y: currentPosition.y+CGFloat.random(in: boxSize/4...3*boxSize/4)), newSpeed: CGVector(dx: particleSpeed * (targetCell.x-currentCell.x+CGFloat.random(in: -particleSpeedVariation...particleSpeedVariation)), dy: particleSpeed * (targetCell.y-currentCell.y+CGFloat.random(in: -particleSpeedVariation...particleSpeedVariation)))))
+            }
             
             if progress == stepDuration {
                 currentCell = targetCell
@@ -187,7 +153,7 @@ class square {
         }
         else if state == "shrink" {
             shrink()
-            if progress == stepDuration+trailLength*(stepDuration+1) {
+            if progress == UInt8(1.0/particleDecay) {
                 currentCell = targetCell
                 state = "inactive"
                 age += 1
@@ -220,10 +186,12 @@ class square {
         color.setFill()
         shape.fill()
         
-        let fillRect = NSRect(x: currentPosition.x+edgeWidth, y: currentPosition.y+edgeWidth, width: CGFloat(boxSize-2*edgeWidth), height: CGFloat(boxSize-2*edgeWidth))
-        fillColor.setFill()
-        let fillShape = NSBezierPath(roundedRect: fillRect, xRadius: cornerRadius-edgeWidth, yRadius: cornerRadius-edgeWidth)
-        fillShape.fill()
+        if boxFillActivated {
+            let fillRect = NSRect(x: currentPosition.x+edgeWidth, y: currentPosition.y+edgeWidth, width: CGFloat(boxSize-2*edgeWidth), height: CGFloat(boxSize-2*edgeWidth))
+            fillColor.setFill()
+            let fillShape = NSBezierPath(roundedRect: fillRect, xRadius: cornerRadius-edgeWidth, yRadius: cornerRadius-edgeWidth)
+            fillShape.fill()
+        }
     }
     
     public func getOccupiedCells() -> [CGPoint] {
