@@ -153,7 +153,7 @@ class square {
         }
         else if state == "shrink" {
             shrink()
-            if progress == UInt8(1.0/particleDecay) {
+            if (particlesActivated && progress == UInt8(1.0/particleDecay)) || (!particlesActivated && progress == stepDuration) {
                 currentCell = targetCell
                 state = "inactive"
                 age += 1
