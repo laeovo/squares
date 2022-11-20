@@ -137,8 +137,10 @@ class square {
             let phase = Double(progress) / Double(stepDuration)
             // movedPhase: [0, 1] --> [0, 1]
 //            let movedPhase = phase // linear
-            let movedPhase = 0.5 - 0.5 * cos(Double.pi * phase) // cosine-ish
-//            let movedPhase = 0.5 - 0.5 * cos(Double.pi * phase) // accelerated cosine
+//            let movedPhase = 0.5 - 0.5 * cos(Double.pi * phase) // cosine-ish
+//            let movedPhase = 0.5 - 0.5 * cbrt(cos(Double.pi * phase)) // accelerated cosine
+            let movedPhase = -2*pow(phase, 3) + 3*pow(phase, 2) // cubic
+//            let movedPhase = phase <= 0.5 ? 2*phase*phase : -phase*phase*2 + 4*phase-1 // pseudo-quadratic
             currentPosition.x = boxSize * CGFloat((targetCell.x-currentCell.x) * movedPhase + currentCell.x)
             currentPosition.y = boxSize * CGFloat((targetCell.y-currentCell.y) * movedPhase + currentCell.y)
             if particlesActivated {
